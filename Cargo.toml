@@ -6,7 +6,8 @@ build = "build.rs"
 
 
 [dependencies]
-glutin = {git ="https://github.com/tomaka/glutin.git"}
+glutin = "0.17.0"
+#glutin = {git ="https://github.com/tomaka/glutin.git"}
 #glutin = {path="../glutin"}
 
 [build-dependencies]
