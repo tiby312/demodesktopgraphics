@@ -158,12 +158,12 @@ impl GlSysBuilder{
 
         //println!("gl_window dim={:?}",gl_window.get_inner_size().unwrap());
 
-        let (width,height)=gl_window.get_inner_size().unwrap();
+        let glutin::dpi::LogicalSize{width,height}=gl_window.get_inner_size().unwrap();
         GlSysBuilder{gl_window}
     }
 
     pub fn get_dim(&self)->(usize,usize){
-        let (width,height)=self.gl_window.get_inner_size().unwrap();
+        let glutin::dpi::LogicalSize{width,height}=self.gl_window.get_inner_size().unwrap();
         (width as usize,height as usize)
     }
 }
@@ -300,12 +300,12 @@ impl GlSys{
         //println!("verts len is ={}",verts.len());
         use glutin::GlContext;
         let GlSysBuilder{gl_window}=builder;
-        let (width,height)=gl_window.get_inner_size().unwrap();
+        let glutin::dpi::LogicalSize{width,height}=gl_window.get_inner_size().unwrap();
          // It is essential to make the context current before calling `gl::load_with`.
         
         unsafe { gl_window.make_current() }.unwrap();
 
-        let cs=ContextSetup::new(&gl_window,width,height,verts);
+        let cs=ContextSetup::new(&gl_window,width as u32,height as u32,verts);
 
         //Self::update_uniform(program,&gl_window,width,height);
         //println!("updated uniform");
@@ -327,7 +327,7 @@ impl GlSys{
         self.back_col=col;
     }
     pub fn get_dim(&self)->(usize,usize){
-        let (width,height)=self.gl_window.get_inner_size().unwrap();
+        let glutin::dpi::LogicalSize{width,height}=self.gl_window.get_inner_size().unwrap();
         (width as usize,height as usize)
     }
     pub fn update(&self,verts:&[Vertex]){
