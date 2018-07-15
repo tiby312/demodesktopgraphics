@@ -1,5 +1,5 @@
 [package]
-name = "demo_desktop_graphics"
+name = "demodesktopgraphics"
 version = "0.1.0"
 authors = ["Ken Reed <kenakioreed@gmail.com>"]
 build = "build.rs"
