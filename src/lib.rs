@@ -26,13 +26,16 @@ use std::path::Path;
 
 //extern crate gl;
 extern crate glutin;
+extern crate axgeom;
 
+use axgeom::*;
 use gl::types::*;
 use std::mem;
 use std::ptr;
 use std::str;
 use std::ffi::CString;
 
+//TODO super inefficient matrix mul
 
 // Shader sources
 static VS_SRC: &'static str = "
@@ -40,6 +43,7 @@ static VS_SRC: &'static str = "
 in vec2 position;
 uniform mat4 mmatrix;
 void main() {
+    gl_PointSize = 8.0;
     gl_Position = vec4(position, 0.0, 1.0)*mmatrix;
 }";
 
@@ -52,7 +56,11 @@ out vec4 out_color;
 
 
 void main() {
-    out_color = vec4(bcol, 1.0);
+    vec2 coord = gl_PointCoord - vec2(0.5);  //from [0,1] to [-0.5,0.5]
+    if(length(coord) > 0.5)                  //outside of circle radius?
+        discard;
+
+    out_color = vec4(bcol, 0.3);
 }";
 
 
@@ -191,7 +199,8 @@ impl Drop for ContextSetup{
     }
 }
 impl ContextSetup{
-    fn new(gl_window:&glutin::GlWindow,width:u32,height:u32,verts:&[Vertex])->ContextSetup{
+
+    fn new(gl_window:&glutin::GlWindow,width:u32,height:u32,verts:&[Vertex],game_world:Rect<f32>)->ContextSetup{
         use glutin::GlContext;
 
         // Load the OpenGL function pointers
@@ -245,45 +254,47 @@ impl ContextSetup{
                 0,
                 ptr::null(),
             );
-
-            //println!("creaed attrib");
         }
-        let scalex = 2.0 * (1.0 / width as f32); //TODO don't hard code!!!!
-        let scaley = 2.0 * (1.0 / height as f32);
+
+        //let scalex = 2.0 * (1.0 / width as f32); //TODO don't hard code!!!!
+        //let scaley = 2.0 * (1.0 / height as f32);
+
+        let width=width as f32;
+        let height=height as f32;
+
+        let ((x1,x2),(y1,y2))=game_world.get();
+        let w=(x2-x1);
+        let h=(y2-y1);
+
+        let scalex=2.0/w;
+        let scaley=2.0/h;
+
+        let translatex=2.0/x1;
+        let translatey=2.0/y1;
+
         //let scalex=1.0;
         //let scaley=1.0;
         unsafe{
-            
+            /*
             let matrix= [
                     [scalex, 0.0, 0.0, -1.0],
                     [0.0, -scaley, 0.0, 1.0],
                     [0.0, 0.0, 1.0, 0.0],
                     [0.0, 0.0, 0.0, 1.0f32]
                 ];
-            
+            */
+            let matrix= [
+                    [scalex, 0.0, 0.0, 0.0],
+                    [0.0, -scaley, 0.0, 0.0],//2.5
+                    [0.0, 0.0, 1.0, 0.0],
+                    [0.0, 0.0, 0.0, 1.0f32]
+                ];
             
             let myLoc:GLint = gl::GetUniformLocation(program, CString::new("mmatrix").unwrap().as_ptr());
-            //println!("got uniform");
-            gl::UniformMatrix4fv(myLoc, 1, 0,std::mem::transmute(&matrix[0][0]));
-            //println!("set uniform matrix");
-        }
-        /*
-        unsafe{
-            let myLoc:GLint = gl::GetUniformLocation(program, CString::new("bcol").unwrap().as_ptr());
-      
-            let mut arr=[1.0,0.5,1.0f32];
-            gl::Uniform3fv(myLoc,1,std::mem::transmute(&arr[0]));
             
+            gl::UniformMatrix4fv(myLoc, 1, 0,std::mem::transmute(&matrix[0][0]));
         }
-        */
-        /*
-        unsafe{
-            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
-            gl::Enable( gl::BLEND );
-        }
-        */
         
-
         ContextSetup{fs,vs,vbo,vao,program}
     }
 
@@ -296,7 +307,7 @@ impl GlSys{
     ///width,0 is top right
     ///0,height is bottom left
     ///width,height is bottom right
-    pub fn new(builder:GlSysBuilder,verts:&[Vertex])->GlSys{
+    pub fn new(builder:GlSysBuilder,verts:&[Vertex],border:Rect<f32>)->GlSys{
         //println!("verts len is ={}",verts.len());
         use glutin::GlContext;
         let GlSysBuilder{gl_window}=builder;
@@ -305,7 +316,7 @@ impl GlSys{
         
         unsafe { gl_window.make_current() }.unwrap();
 
-        let cs=ContextSetup::new(&gl_window,width as u32,height as u32,verts);
+        let cs=ContextSetup::new(&gl_window,width as u32,height as u32,verts,border);
 
         //Self::update_uniform(program,&gl_window,width,height);
         //println!("updated uniform");
@@ -370,7 +381,9 @@ impl GlSys{
 
 
             // Draw a triangle from the 3 vertices
-            gl::DrawArrays(gl::TRIANGLES, 0, self.length as i32 *2);
+            //gl::DrawArrays(gl::TRIANGLES, 0, self.length as i32 *2);
+            //gl::PointSize(5.0);
+            gl::DrawArrays(gl::POINTS, 0, self.length as i32 *2);
         }
         self.gl_window.swap_buffers().unwrap();
     }

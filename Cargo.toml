@@ -7,6 +7,8 @@ build = "build.rs"
 
 [dependencies]
 glutin = "0.18.0"
+axgeom = "1.0.1"
+
 #glutin = {git ="https://github.com/tomaka/glutin.git"}
 #glutin = {path="../glutin"}
 
