@@ -41,29 +41,30 @@ use std::ffi::CString;
 static VS_SRC: &'static str = "
 #version 300 es
 in vec2 position;
-uniform mat4 mmatrix;
+uniform mat2 mmatrix;
+uniform float point_size;
 void main() {
-    gl_PointSize = 8.0;
-    gl_Position = vec4(position, 0.0, 1.0)*mmatrix;
+    gl_PointSize = point_size;
+    gl_Position = vec4(position*mmatrix, 0.0, 1.0);
 }";
 
 static FS_SRC: &'static str = "
 #version 300 es
-
 precision mediump float;
 uniform vec3 bcol;
 out vec4 out_color;
-
-
 void main() {
     vec2 coord = gl_PointCoord - vec2(0.5);  //from [0,1] to [-0.5,0.5]
-    if(length(coord) > 0.5)                  //outside of circle radius?
+    float dis=dot(coord,coord);
+    if(dis > 0.25)                  //outside of circle radius?
         discard;
 
     out_color = vec4(bcol, 0.3);
 }";
 
 
+
+#[repr(transparent)]
 #[derive(Copy,Clone,Debug,Default)]
 pub struct Vertex(pub [f32;2]);
 
@@ -155,7 +156,10 @@ impl GlSysBuilder{
     pub fn new(events_loop:&glutin::EventsLoop)->GlSysBuilder{
         use glutin::GlContext;
 
-        let window = glutin::WindowBuilder::new().with_multitouch()/*.with_dimensions(800,400)*/;
+        let mut size = glutin::dpi::PhysicalSize::new(600., 600.);
+
+        let window = glutin::WindowBuilder::new().with_multitouch()
+.with_dimensions(glutin::dpi::LogicalSize::from_physical(size, 1.0));
  
         let context = glutin::ContextBuilder::new()
         //we are targeting only opengl 3.0 es. and glsl 300 es.
@@ -200,7 +204,7 @@ impl Drop for ContextSetup{
 }
 impl ContextSetup{
 
-    fn new(gl_window:&glutin::GlWindow,width:u32,height:u32,verts:&[Vertex],game_world:Rect<f32>)->ContextSetup{
+    fn new(gl_window:&glutin::GlWindow,width:u32,height:u32,verts:&[Vertex],game_world:Rect<f32>,point_size:f32)->ContextSetup{
         use glutin::GlContext;
 
         // Load the OpenGL function pointers
@@ -227,7 +231,7 @@ impl ContextSetup{
             gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
             gl::BufferData(
                 gl::ARRAY_BUFFER,
-                (verts.len() *2* mem::size_of::<GLfloat>()) as GLsizeiptr,
+                (verts.len() *mem::size_of::<Vertex>()) as GLsizeiptr,
                 mem::transmute(&verts[0]),
                 gl::DYNAMIC_DRAW,
             );
@@ -240,7 +244,6 @@ impl ContextSetup{
             //gl::BindFragDataLocation(program, 0, CString::new("out_color").unwrap().as_ptr());
             gl::BindAttribLocation(program, 0, CString::new("out_color").unwrap().as_ptr());
             
-            //println!("bind frag");
             // Specify the layout of the vertex data
             let pos_attr = gl::GetAttribLocation(program, CString::new("position").unwrap().as_ptr());
             //println!("attrib location");
@@ -256,9 +259,16 @@ impl ContextSetup{
             );
         }
 
-        //let scalex = 2.0 * (1.0 / width as f32); //TODO don't hard code!!!!
-        //let scaley = 2.0 * (1.0 / height as f32);
 
+        
+        Self::set_border_radius(program,game_world,width as usize,height as usize,point_size);
+
+        
+        
+        ContextSetup{fs,vs,vbo,vao,program}
+    }
+
+    fn set_border_radius(program:GLuint,game_world:Rect<f32>,width:usize,height:usize,point_size:f32){
         let width=width as f32;
         let height=height as f32;
 
@@ -269,33 +279,21 @@ impl ContextSetup{
         let scalex=2.0/w;
         let scaley=2.0/h;
 
-        let translatex=2.0/x1;
-        let translatey=2.0/y1;
-
-        //let scalex=1.0;
-        //let scaley=1.0;
         unsafe{
-            /*
             let matrix= [
-                    [scalex, 0.0, 0.0, -1.0],
-                    [0.0, -scaley, 0.0, 1.0],
-                    [0.0, 0.0, 1.0, 0.0],
-                    [0.0, 0.0, 0.0, 1.0f32]
-                ];
-            */
-            let matrix= [
-                    [scalex, 0.0, 0.0, 0.0],
-                    [0.0, -scaley, 0.0, 0.0],//2.5
-                    [0.0, 0.0, 1.0, 0.0],
-                    [0.0, 0.0, 0.0, 1.0f32]
-                ];
+                    [scalex, 0.0, ],
+                    [0.0, -scaley,],
+                ];    
             
             let myLoc:GLint = gl::GetUniformLocation(program, CString::new("mmatrix").unwrap().as_ptr());
-            
-            gl::UniformMatrix4fv(myLoc, 1, 0,std::mem::transmute(&matrix[0][0]));
+            gl::UniformMatrix2fv(myLoc, 1, 0,std::mem::transmute(&matrix[0][0]));
+
+
+
+            let point_size=point_size*(width/w);
+            let myLoc:GLint = gl::GetUniformLocation(program, CString::new("point_size").unwrap().as_ptr());
+            gl::Uniform1f(myLoc,point_size);
         }
-        
-        ContextSetup{fs,vs,vbo,vao,program}
     }
 
 }
@@ -307,7 +305,7 @@ impl GlSys{
     ///width,0 is top right
     ///0,height is bottom left
     ///width,height is bottom right
-    pub fn new(builder:GlSysBuilder,verts:&[Vertex],border:Rect<f32>)->GlSys{
+    pub fn new(builder:GlSysBuilder,verts:&[Vertex],border:Rect<f32>,point_size:f32)->GlSys{
         //println!("verts len is ={}",verts.len());
         use glutin::GlContext;
         let GlSysBuilder{gl_window}=builder;
@@ -316,7 +314,7 @@ impl GlSys{
         
         unsafe { gl_window.make_current() }.unwrap();
 
-        let cs=ContextSetup::new(&gl_window,width as u32,height as u32,verts,border);
+        let cs=ContextSetup::new(&gl_window,width as u32,height as u32,verts,border,point_size);
 
         //Self::update_uniform(program,&gl_window,width,height);
         //println!("updated uniform");
@@ -334,6 +332,12 @@ impl GlSys{
             
         }
     }
+    pub fn set_border_radius(&mut self,border:Rect<f32>,radius:f32){
+        let (width,height)=self.get_dim();
+
+        ContextSetup::set_border_radius(self.cs.program,border,width,height,radius);
+
+    }
     pub fn set_back_color(&mut self,col:[f32;3]){
         self.back_col=col;
     }
@@ -348,7 +352,7 @@ impl GlSys{
                 gl::BufferSubData(
                     gl::ARRAY_BUFFER,
                     0,
-                    (verts.len()*2 * mem::size_of::<GLfloat>()) as GLsizeiptr,
+                    (verts.len()*mem::size_of::<Vertex>()) as GLsizeiptr,
                     mem::transmute(&verts[0]),
                 );
             }
@@ -363,7 +367,7 @@ impl GlSys{
             if verts.len()>0{
                 gl::BufferData(
                     gl::ARRAY_BUFFER,
-                    (verts.len() *2* mem::size_of::<GLfloat>()) as GLsizeiptr,
+                    (verts.len() *mem::size_of::<Vertex>()) as GLsizeiptr,
                     mem::transmute(&verts[0]),
                     gl::DYNAMIC_DRAW,
                 );
@@ -383,7 +387,7 @@ impl GlSys{
             // Draw a triangle from the 3 vertices
             //gl::DrawArrays(gl::TRIANGLES, 0, self.length as i32 *2);
             //gl::PointSize(5.0);
-            gl::DrawArrays(gl::POINTS, 0, self.length as i32 *2);
+            gl::DrawArrays(gl::POINTS, 0, self.length as i32);
         }
         self.gl_window.swap_buffers().unwrap();
     }
