@@ -147,9 +147,8 @@ pub struct GlSysBuilder{
 impl GlSysBuilder{
 
     pub fn new(events_loop:&glutin::EventsLoop)->GlSysBuilder{
-        use glutin::GlContext;
-
-        let mut size = glutin::dpi::PhysicalSize::new(600., 600.);
+        
+        let size = glutin::dpi::PhysicalSize::new(600., 600.);
 
         let window = glutin::WindowBuilder::new().with_multitouch()
 .with_dimensions(glutin::dpi::LogicalSize::from_physical(size, 1.0));
@@ -163,7 +162,7 @@ impl GlSysBuilder{
 
         //println!("gl_window dim={:?}",gl_window.get_inner_size().unwrap());
 
-        let glutin::dpi::LogicalSize{width,height}=gl_window.get_inner_size().unwrap();
+        let glutin::dpi::LogicalSize{width: _,height: _}=gl_window.get_inner_size().unwrap();
         GlSysBuilder{gl_window}
     }
 
@@ -179,7 +178,7 @@ struct ContextSetup{
     fs:GLuint,
     vs:GLuint,
     vbo:u32,
-    vao:u32,
+    _vao:u32,
 }
 
 impl Drop for ContextSetup{
@@ -211,7 +210,7 @@ impl ContextSetup{
         let program = link_program(vs, fs);
 
         //println!("created vertex program");
-        let mut vao = 0;
+        let vao = 0;
         let mut vbo = 0;
 
         unsafe {
@@ -258,16 +257,16 @@ impl ContextSetup{
 
         
         
-        ContextSetup{fs,vs,vbo,vao,program}
+        ContextSetup{fs,vs,vbo,_vao:vao,program}
     }
 
     fn set_border_radius(program:GLuint,game_world:Rect<f32>,width:usize,height:usize,point_size:f32){
         let width=width as f32;
-        let height=height as f32;
+        let _height=height as f32;
 
         let ((x1,x2),(y1,y2))=game_world.get();
-        let w=(x2-x1);
-        let h=(y2-y1);
+        let w=x2-x1;
+        let h=y2-y1;
 
         let scalex=2.0/w;
         let scaley=2.0/h;
@@ -278,14 +277,14 @@ impl ContextSetup{
                     [0.0, -scaley,],
                 ];    
             
-            let myLoc:GLint = gl::GetUniformLocation(program, CString::new("mmatrix").unwrap().as_ptr());
-            gl::UniformMatrix2fv(myLoc, 1, 0,std::mem::transmute(&matrix[0][0]));
+            let myloc:GLint = gl::GetUniformLocation(program, CString::new("mmatrix").unwrap().as_ptr());
+            gl::UniformMatrix2fv(myloc, 1, 0,std::mem::transmute(&matrix[0][0]));
 
 
 
             let point_size=point_size*(width/w);
-            let myLoc:GLint = gl::GetUniformLocation(program, CString::new("point_size").unwrap().as_ptr());
-            gl::Uniform1f(myLoc,point_size);
+            let myloc:GLint = gl::GetUniformLocation(program, CString::new("point_size").unwrap().as_ptr());
+            gl::Uniform1f(myloc,point_size);
         }
     }
 
@@ -318,10 +317,10 @@ impl GlSys{
 
     pub fn set_bot_color(&mut self,col:[f32;3]){
         unsafe{
-            let myLoc:GLint = gl::GetUniformLocation(self.cs.program, CString::new("bcol").unwrap().as_ptr());
+            let myloc:GLint = gl::GetUniformLocation(self.cs.program, CString::new("bcol").unwrap().as_ptr());
       
             //let mut arr=[1.0,0.5,1.0f32];
-            gl::Uniform3fv(myLoc,1,std::mem::transmute(&col[0]));
+            gl::Uniform3fv(myloc,1,std::mem::transmute(&col[0]));
             
         }
     }
@@ -354,7 +353,7 @@ impl GlSys{
 
     pub fn re_generate_buffer(&mut self,verts:&[Vertex]){
         self.length=verts.len();
-        let vbo=&mut self.cs.vbo;
+        let _vbo=&mut self.cs.vbo;
         unsafe{
 
             if verts.len()>0{
