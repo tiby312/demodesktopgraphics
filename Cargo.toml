@@ -3,11 +3,12 @@ name = "demodesktopgraphics"
 version = "0.1.0"
 authors = ["Ken Reed <kenakioreed@gmail.com>"]
 build = "build.rs"
-
+edition = "2018"
 
 [dependencies]
 glutin = "0.18.0"
-axgeom = "1.0.1"
+axgeom = "1.0.2"
+
 
 #glutin = {git ="https://github.com/tomaka/glutin.git"}
 #glutin = {path="../glutin"}

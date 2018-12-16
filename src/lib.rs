@@ -18,18 +18,11 @@ mod gl {
 
 
 
-use std::env;
-use std::fs::File;
-use std::path::Path;
-
-
-
-//extern crate gl;
 extern crate glutin;
 extern crate axgeom;
 
 use axgeom::*;
-use gl::types::*;
+use crate::gl::types::*;
 use std::mem;
 use std::ptr;
 use std::str;
