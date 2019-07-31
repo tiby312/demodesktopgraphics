@@ -1,0 +1,156 @@
+demodesktopgraphics v0.1.0 (/home/ken/rust/demodesktopgraphics)
+├── axgeom v1.0.7 (/home/ken/rust/axgeom)
+│   ├── num-traits v0.2.8
+│   │   [build-dependencies]
+│   │   └── autocfg v0.1.5
+│   └── ordered-float v1.0.2
+│       └── num-traits v0.2.8 (*)
+└── glutin v0.21.0
+    ├── derivative v1.0.2
+    │   ├── proc-macro2 v0.4.30
+    │   │   └── unicode-xid v0.1.0
+    │   ├── quote v0.6.13
+    │   │   └── proc-macro2 v0.4.30 (*)
+    │   └── syn v0.15.42
+    │       ├── proc-macro2 v0.4.30 (*)
+    │       ├── quote v0.6.13 (*)
+    │       └── unicode-xid v0.1.0 (*)
+    ├── glutin_egl_sys v0.1.3
+    │   [build-dependencies]
+    │   └── gl_generator v0.11.0
+    │       ├── khronos_api v3.1.0
+    │       ├── log v0.4.8
+    │       │   └── cfg-if v0.1.9
+    │       └── xml-rs v0.8.0
+    ├── glutin_glx_sys v0.1.5
+    │   └── x11-dl v2.18.3
+    │       ├── lazy_static v1.3.0
+    │       └── libc v0.2.60
+    │       [build-dependencies]
+    │       └── pkg-config v0.3.15
+    │   [build-dependencies]
+    │   └── gl_generator v0.11.0 (*)
+    ├── lazy_static v1.3.0 (*)
+    ├── libloading v0.5.2
+    │   [build-dependencies]
+    │   └── cc v1.0.38
+    ├── osmesa-sys v0.1.2
+    │   └── shared_library v0.1.9
+    │       ├── lazy_static v1.3.0 (*)
+    │       └── libc v0.2.60 (*)
+    ├── parking_lot v0.7.1
+    │   ├── lock_api v0.1.5
+    │   │   ├── owning_ref v0.4.0
+    │   │   │   └── stable_deref_trait v1.1.1
+    │   │   └── scopeguard v0.3.3
+    │   └── parking_lot_core v0.4.0
+    │       ├── libc v0.2.60 (*)
+    │       ├── rand v0.6.5
+    │       │   ├── libc v0.2.60 (*)
+    │       │   ├── rand_chacha v0.1.1
+    │       │   │   └── rand_core v0.3.1
+    │       │   │       └── rand_core v0.4.0
+    │       │   │   [build-dependencies]
+    │       │   │   └── autocfg v0.1.5 (*)
+    │       │   ├── rand_core v0.4.0 (*)
+    │       │   ├── rand_hc v0.1.0
+    │       │   │   └── rand_core v0.3.1 (*)
+    │       │   ├── rand_isaac v0.1.1
+    │       │   │   └── rand_core v0.3.1 (*)
+    │       │   ├── rand_jitter v0.1.4
+    │       │   │   └── rand_core v0.4.0 (*)
+    │       │   ├── rand_os v0.1.3
+    │       │   │   ├── libc v0.2.60 (*)
+    │       │   │   └── rand_core v0.4.0 (*)
+    │       │   ├── rand_pcg v0.1.2
+    │       │   │   └── rand_core v0.4.0 (*)
+    │       │   │   [build-dependencies]
+    │       │   │   └── autocfg v0.1.5 (*)
+    │       │   └── rand_xorshift v0.1.1
+    │       │       └── rand_core v0.3.1 (*)
+    │       │   [build-dependencies]
+    │       │   └── autocfg v0.1.5 (*)
+    │       └── smallvec v0.6.10
+    │       [build-dependencies]
+    │       └── rustc_version v0.2.3
+    │           └── semver v0.9.0
+    │               └── semver-parser v0.7.0
+    ├── wayland-client v0.21.13
+    │   ├── bitflags v1.1.0
+    │   ├── downcast-rs v1.0.4
+    │   ├── libc v0.2.60 (*)
+    │   ├── nix v0.14.1
+    │   │   ├── bitflags v1.1.0 (*)
+    │   │   ├── cfg-if v0.1.9 (*)
+    │   │   ├── libc v0.2.60 (*)
+    │   │   └── void v1.0.2
+    │   ├── wayland-commons v0.21.13
+    │   │   ├── nix v0.14.1 (*)
+    │   │   └── wayland-sys v0.21.13
+    │   │       ├── dlib v0.4.1
+    │   │       │   └── libloading v0.5.2 (*)
+    │   │       └── lazy_static v1.3.0 (*)
+    │   └── wayland-sys v0.21.13 (*)
+    │   [build-dependencies]
+    │   └── wayland-scanner v0.21.13
+    │       ├── proc-macro2 v0.4.30 (*)
+    │       ├── quote v0.6.13 (*)
+    │       └── xml-rs v0.8.0 (*)
+    └── winit v0.19.2
+        ├── lazy_static v1.3.0 (*)
+        ├── libc v0.2.60 (*)
+        ├── log v0.4.8 (*)
+        ├── parking_lot v0.8.0
+        │   ├── lock_api v0.2.0
+        │   │   └── scopeguard v1.0.0
+        │   └── parking_lot_core v0.5.0
+        │       ├── cfg-if v0.1.9 (*)
+        │       ├── libc v0.2.60 (*)
+        │       ├── rand v0.6.5 (*)
+        │       └── smallvec v0.6.10 (*)
+        │       [build-dependencies]
+        │       └── rustc_version v0.2.3 (*)
+        │   [build-dependencies]
+        │   └── rustc_version v0.2.3 (*)
+        ├── percent-encoding v2.0.0
+        ├── smithay-client-toolkit v0.4.6
+        │   ├── andrew v0.2.1
+        │   │   ├── bitflags v1.1.0 (*)
+        │   │   ├── line_drawing v0.7.0
+        │   │   │   └── num-traits v0.2.8 (*)
+        │   │   ├── rusttype v0.7.7
+        │   │   │   ├── approx v0.3.2
+        │   │   │   │   └── num-traits v0.2.8 (*)
+        │   │   │   ├── arrayvec v0.4.11
+        │   │   │   │   └── nodrop v0.1.13
+        │   │   │   ├── ordered-float v1.0.2 (*)
+        │   │   │   └── stb_truetype v0.2.6
+        │   │   │       └── byteorder v1.3.2
+        │   │   ├── walkdir v2.2.9
+        │   │   │   └── same-file v1.0.5
+        │   │   ├── xdg v2.2.0
+        │   │   └── xml-rs v0.8.0 (*)
+        │   ├── bitflags v1.1.0 (*)
+        │   ├── dlib v0.4.1 (*)
+        │   ├── lazy_static v1.3.0 (*)
+        │   ├── memmap v0.7.0
+        │   │   └── libc v0.2.60 (*)
+        │   ├── nix v0.14.1 (*)
+        │   ├── wayland-client v0.21.13 (*)
+        │   ├── wayland-commons v0.21.13 (*)
+        │   └── wayland-protocols v0.21.13
+        │       ├── bitflags v1.1.0 (*)
+        │       ├── wayland-client v0.21.13 (*)
+        │       ├── wayland-commons v0.21.13 (*)
+        │       └── wayland-sys v0.21.13 (*)
+        │       [build-dependencies]
+        │       └── wayland-scanner v0.21.13 (*)
+        │   [dev-dependencies]
+        │   └── wayland-client v0.21.13 (*)
+        ├── wayland-client v0.21.13 (*)
+        └── x11-dl v2.18.3 (*)
+[build-dependencies]
+└── gl_generator v0.13.0
+    ├── khronos_api v3.1.0 (*)
+    ├── log v0.4.8 (*)
+    └── xml-rs v0.8.0 (*)
