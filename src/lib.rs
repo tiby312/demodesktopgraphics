@@ -52,7 +52,7 @@ void main() {
     if(dis > 0.25)                  //outside of circle radius?
         discard;
 
-    out_color = vec4(bcol, 0.3);
+    out_color = vec4(bcol, 1.0);
 }";
 
 
@@ -133,41 +133,42 @@ fn link_program(vs: GLuint, fs: GLuint) -> GLuint {
 
 
 
-pub struct GlSys{
-    length:usize,
-    gl_window:glutin::GlWindow,
-    cs:ContextSetup,
-    back_col:[f32;3]
-}
-
+use glutin::NotCurrent;
+use glutin::PossiblyCurrent;
 
 pub struct GlSysBuilder{
-    gl_window:glutin::GlWindow
+    windowed_context:glutin::WindowedContext<PossiblyCurrent>
 }
 impl GlSysBuilder{
 
     pub fn new(events_loop:&glutin::EventsLoop)->GlSysBuilder{
         
-        let size = glutin::dpi::PhysicalSize::new(600., 600.);
+        let size = glutin::dpi::PhysicalSize::new(1024., 768.);
 
-        let window = glutin::WindowBuilder::new().with_multitouch()
-.with_dimensions(glutin::dpi::LogicalSize::from_physical(size, 1.0));
+        let gl_window = glutin::WindowBuilder::new().with_multitouch()
+            .with_dimensions(glutin::dpi::LogicalSize::from_physical(size, 1.0));
  
-        let context = glutin::ContextBuilder::new()
+
         //we are targeting only opengl 3.0 es. and glsl 300 es.
-        .with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGlEs, (3, 0)))
-        .with_vsync(true);
         
-        let gl_window = glutin::GlWindow::new(window, context, &events_loop).unwrap();
 
-        //println!("gl_window dim={:?}",gl_window.get_inner_size().unwrap());
+        
+        //let gl_window = glutin::WindowBuilder::new().with_title("Hay");
 
-        let glutin::dpi::LogicalSize{width: _,height: _}=gl_window.get_inner_size().unwrap();
-        GlSysBuilder{gl_window}
+        let windowed_context = glutin::ContextBuilder::new()
+        .with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGlEs, (3, 0)))
+        .with_vsync(true).
+        build_windowed(gl_window,&events_loop).unwrap();
+  
+        let windowed_context = unsafe { windowed_context.make_current().unwrap() };
+
+
+        let glutin::dpi::LogicalSize{width: _,height: _}=windowed_context.window().get_inner_size().unwrap();
+        GlSysBuilder{windowed_context}
     }
 
     pub fn get_dim(&self)->(usize,usize){
-        let glutin::dpi::LogicalSize{width,height}=self.gl_window.get_inner_size().unwrap();
+        let glutin::dpi::LogicalSize{width,height}=self.windowed_context.window().get_inner_size().unwrap();
         (width as usize,height as usize)
     }
 }
@@ -196,12 +197,12 @@ impl Drop for ContextSetup{
 }
 impl ContextSetup{
 
-    fn new(gl_window:&glutin::GlWindow,width:u32,height:u32,verts:&[Vertex],game_world:Rect<f32>,point_size:f32)->ContextSetup{
-        use glutin::GlContext;
+    fn new(context:&glutin::Context<PossiblyCurrent>,width:u32,height:u32,verts:&[Vertex],game_world:Rect<f32>,point_size:f32)->ContextSetup{
+        use glutin::Context;
 
         // Load the OpenGL function pointers
         // TODO: `as *const _` will not be needed once glutin is updated to the latest gl version
-        gl::load_with(|symbol| gl_window.get_proc_address(symbol) as *const _);
+        gl::load_with(|symbol| context.get_proc_address(symbol) as *const _);
 
 
         // Create GLSL shaders
@@ -254,9 +255,12 @@ impl ContextSetup{
 
         
         Self::set_border_radius(program,game_world,width as usize,height as usize,point_size);
-
-        
-        
+        /*
+        unsafe{
+            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+            gl::Enable( gl::BLEND );
+        }
+        */
         ContextSetup{fs,vs,vbo,_vao:vao,program}
     }
 
@@ -289,6 +293,17 @@ impl ContextSetup{
     }
 
 }
+
+
+
+pub struct GlSys{
+    length:usize,
+    windowed_context:glutin::WindowedContext<PossiblyCurrent>,
+    cs:ContextSetup,
+    back_col:[f32;3]
+}
+
+
 impl GlSys{
 
     ///array should be full of xy pairs
@@ -299,18 +314,20 @@ impl GlSys{
     ///width,height is bottom right
     pub fn new(builder:GlSysBuilder,verts:&[Vertex],border:Rect<f32>,point_size:f32)->GlSys{
         //println!("verts len is ={}",verts.len());
-        use glutin::GlContext;
-        let GlSysBuilder{gl_window}=builder;
-        let glutin::dpi::LogicalSize{width,height}=gl_window.get_inner_size().unwrap();
+        use glutin::Context;
+        let GlSysBuilder{windowed_context}=builder;
+        
+        let windowed_context = unsafe { windowed_context.make_current() }.unwrap();
+
+        let glutin::dpi::LogicalSize{width,height}=windowed_context.window().get_inner_size().unwrap();
          // It is essential to make the context current before calling `gl::load_with`.
         
-        unsafe { gl_window.make_current() }.unwrap();
-
-        let cs=ContextSetup::new(&gl_window,width as u32,height as u32,verts,border,point_size);
+        
+        let cs=ContextSetup::new(windowed_context.context(),width as u32,height as u32,verts,border,point_size);
 
         //Self::update_uniform(program,&gl_window,width,height);
         //println!("updated uniform");
-        GlSys{gl_window,length:verts.len(),cs,back_col:[0.2,0.2,0.2]}
+        GlSys{windowed_context,length:verts.len(),cs,back_col:[0.2,0.2,0.2]}
 
     }
     
@@ -334,7 +351,7 @@ impl GlSys{
         self.back_col=col;
     }
     pub fn get_dim(&self)->(usize,usize){
-        let glutin::dpi::LogicalSize{width,height}=self.gl_window.get_inner_size().unwrap();
+        let glutin::dpi::LogicalSize{width,height}=self.windowed_context.window().get_inner_size().unwrap();
         (width as usize,height as usize)
     }
     pub fn update(&self,verts:&[Vertex]){
@@ -368,7 +385,7 @@ impl GlSys{
     }
     
     pub fn draw(&self){
-        use glutin::GlContext;
+        use glutin::Context;
         unsafe{
             let b=self.back_col;
             // Clear the screen to black
@@ -381,7 +398,7 @@ impl GlSys{
             //gl::PointSize(5.0);
             gl::DrawArrays(gl::POINTS, 0, self.length as i32);
         }
-        self.gl_window.swap_buffers().unwrap();
+        self.windowed_context.swap_buffers().unwrap();
     }
 }
 
