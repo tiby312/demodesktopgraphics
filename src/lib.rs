@@ -195,6 +195,9 @@ impl Drop for ContextSetup{
         }
     }
 }
+
+
+
 impl ContextSetup{
 
     fn new(context:&glutin::Context<PossiblyCurrent>,width:u32,height:u32,verts:&[Vertex],game_world:Rect<f32>,point_size:f32)->ContextSetup{
@@ -327,7 +330,7 @@ impl GlSys{
 
         //Self::update_uniform(program,&gl_window,width,height);
         //println!("updated uniform");
-        GlSys{windowed_context,length:verts.len(),cs,back_col:[0.2,0.2,0.2]}
+        GlSys{windowed_context,length:verts.len(),cs,back_col:[0.,0.,0.]}
 
     }
     
@@ -396,7 +399,7 @@ impl GlSys{
             // Draw a triangle from the 3 vertices
             //gl::DrawArrays(gl::TRIANGLES, 0, self.length as i32 *2);
             //gl::PointSize(5.0);
-            gl::DrawArrays(gl::POINTS, 0, self.length as i32);
+            gl::DrawArrays(gl::POINTS,0, self.length as i32);
         }
         self.windowed_context.swap_buffers().unwrap();
     }
