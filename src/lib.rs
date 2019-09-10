@@ -1,16 +1,3 @@
-// Copyright 2015 Brendan Zabarauskas and the gl-rs developers
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 mod gl {
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
@@ -32,8 +19,9 @@ use std::str;
 use std::ffi::CString;
 use core::marker::PhantomData;
 
-//TODO super inefficient matrix mul
-
+//https://github.com/mattdesl/three-line-2d
+//TODO try this.
+//https://mattdesl.svbtle.com/drawing-lines-is-hard
 
 
 // Shader sources
@@ -53,6 +41,7 @@ precision mediump float;
 uniform vec3 bcol;
 out vec4 out_color;
 void main() {
+
     vec2 coord = gl_PointCoord - vec2(0.5);  //from [0,1] to [-0.5,0.5]
     float dis=dot(coord,coord);
     if(dis > 0.25)                  //outside of circle radius?
@@ -72,19 +61,6 @@ pub struct Vertex(pub [f32;2]);
 use glutin::NotCurrent;
 use glutin::PossiblyCurrent;
 
-/*
-pub struct GlSysBuilder{
-    windowed_context:glutin::WindowedContext<PossiblyCurrent>
-}
-impl GlSysBuilder{
-
-    pub fn new()->GlSysBuilder{
-        
-        GlSysBuilder{windowed_context}
-    }
-
-}
-*/
 
 
 struct ContextSetup{
@@ -92,7 +68,6 @@ struct ContextSetup{
     fs:GLuint,
     vs:GLuint,
     vbo:u32,
-    _vao:u32,
 }
 
 impl Drop for ContextSetup{
@@ -103,8 +78,6 @@ impl Drop for ContextSetup{
             gl::DeleteShader(self.fs);
             gl::DeleteShader(self.vs);
             gl::DeleteBuffers(1, &self.vbo);
-            //TODO what to replace with?
-            //gl::DeleteVertexArrays(1, &self.vao);
         }
     }
 }
@@ -117,7 +90,6 @@ impl ContextSetup{
         use glutin::Context;
 
         // Load the OpenGL function pointers
-        // TODO: `as *const _` will not be needed once glutin is updated to the latest gl version
         gl::load_with(|symbol| context.get_proc_address(symbol) as *const _);
 
 
@@ -126,14 +98,9 @@ impl ContextSetup{
         let fs = compile_shader(FS_SRC, gl::FRAGMENT_SHADER);
         let program = link_program(vs, fs);
 
-        //println!("created vertex program");
-        let vao = 0;
         let mut vbo = 0;
 
         unsafe {
-            // Create Vertex Array Object
-            //gl::GenVertexArrays(1, &mut vao);
-            //gl::BindVertexArray(vao);
 
             // Create a Vertex Buffer Object and copy the vertex data to it
             gl::GenBuffers(1, &mut vbo);
@@ -145,19 +112,14 @@ impl ContextSetup{
                 gl::DYNAMIC_DRAW,
             );
 
-            //println!("created buffer draw");
-
             // Use shader program
             gl::UseProgram(program);
-            //println!("used program");
-            //gl::BindFragDataLocation(program, 0, CString::new("out_color").unwrap().as_ptr());
+            
             gl::BindAttribLocation(program, 0, CString::new("out_color").unwrap().as_ptr());
             
             // Specify the layout of the vertex data
             let pos_attr = gl::GetAttribLocation(program, CString::new("position").unwrap().as_ptr());
-            //println!("attrib location");
             gl::EnableVertexAttribArray(pos_attr as GLuint);
-            //println!("enabled");
             gl::VertexAttribPointer(
                 pos_attr as GLuint,
                 2,
@@ -167,17 +129,10 @@ impl ContextSetup{
                 ptr::null(),
             );
         }
-
-
         
         Self::set_border_radius(program,game_world,width as usize,height as usize,point_size);
-        /*
-        unsafe{
-            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
-            gl::Enable( gl::BLEND );
-        }
-        */
-        ContextSetup{fs,vs,vbo,_vao:vao,program}
+
+        ContextSetup{fs,vs,vbo,program}
     }
 
     fn set_border_radius(program:GLuint,game_world:Rect<f32>,width:usize,height:usize,point_size:f32){
@@ -251,10 +206,6 @@ impl GlSys{
 
         //we are targeting only opengl 3.0 es. and glsl 300 es.
         
-
-        
-        //let gl_window = glutin::WindowBuilder::new().with_title("Hay");
-
         let windowed_context = glutin::ContextBuilder::new()
         .with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGlEs, (3, 0)))
         .with_vsync(true).
@@ -265,11 +216,7 @@ impl GlSys{
 
         let glutin::dpi::LogicalSize{width: _,height: _}=windowed_context.window().get_inner_size().unwrap();
 
-
-
-        //println!("verts len is ={}",verts.len());
         use glutin::Context;
-        //let GlSysBuilder{windowed_context}=builder;
         
         let windowed_context = unsafe { windowed_context.make_current() }.unwrap();
 
@@ -280,8 +227,6 @@ impl GlSys{
         let cs=ContextSetup::new(windowed_context.context(),width as u32,height as u32,&buffer,border,point_size);
 
         assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
-        //Self::update_uniform(program,&gl_window,width,height);
-        //println!("updated uniform");
         GlSys{windowed_context,buffer,cs,back_col:[0.,0.,0.],_p:PhantomData}
 
     }
@@ -291,7 +236,6 @@ impl GlSys{
         unsafe{
             let myloc:GLint = gl::GetUniformLocation(self.cs.program, CString::new("bcol").unwrap().as_ptr());
       
-            //let mut arr=[1.0,0.5,1.0f32];
             gl::Uniform3fv(myloc,1,std::mem::transmute(&col[0]));
             
         }
@@ -333,21 +277,7 @@ impl GlSys{
         assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
         
     }
-    /*
-    pub fn update(&self,verts:&[Vertex]){
-        assert!(verts.len()==self.length);
-        unsafe{
-            if verts.len()>0{
-                gl::BufferSubData(
-                    gl::ARRAY_BUFFER,
-                    0,
-                    (verts.len()*mem::size_of::<Vertex>()) as GLsizeiptr,
-                    mem::transmute(verts.as_ptr()),
-                );
-            }
-        }
-    }
-    */
+
     pub fn re_generate_buffer(&mut self,num_verticies:usize){
         self.buffer.resize(num_verticies,Vertex([0.0;2]));
         let _vbo=&mut self.cs.vbo;
