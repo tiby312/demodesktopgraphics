@@ -279,6 +279,7 @@ impl GlSys{
         
         let cs=ContextSetup::new(windowed_context.context(),width as u32,height as u32,&buffer,border,point_size);
 
+        assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
         //Self::update_uniform(program,&gl_window,width,height);
         //println!("updated uniform");
         GlSys{windowed_context,buffer,cs,back_col:[0.,0.,0.],_p:PhantomData}
@@ -294,12 +295,16 @@ impl GlSys{
             gl::Uniform3fv(myloc,1,std::mem::transmute(&col[0]));
             
         }
+        assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
+        
     }
-    pub fn set_border_radius(&mut self,border:Rect<f32>,radius:f32){
+
+    pub fn set_camera_and_bot_radius(&mut self,border:Rect<f32>,radius:f32){
         let (width,height)=self.get_dim();
 
         ContextSetup::set_border_radius(self.cs.program,border,width,height,radius);
-
+        assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
+        
     }
     pub fn set_back_color(&mut self,col:[f32;3]){
         self.back_col=col;
@@ -325,6 +330,8 @@ impl GlSys{
             );
         
         }
+        assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
+        
     }
     /*
     pub fn update(&self,verts:&[Vertex]){
@@ -352,8 +359,9 @@ impl GlSys{
                 mem::transmute(self.buffer.as_ptr()),
                 gl::DYNAMIC_DRAW,
             );
-        
         }
+        assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
+        
     }
     
     pub fn draw(&self){
@@ -367,6 +375,8 @@ impl GlSys{
             gl::DrawArrays(gl::POINTS,0, self.buffer.len() as i32);
         }
         self.windowed_context.swap_buffers().unwrap();
+        assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
+        
     }
 }
 
