@@ -17,6 +17,9 @@ mod gl {
 }
 
 
+mod shader;
+use shader::*;
+
 
 extern crate glutin;
 extern crate axgeom;
@@ -27,8 +30,11 @@ use std::mem;
 use std::ptr;
 use std::str;
 use std::ffi::CString;
+use core::marker::PhantomData;
 
 //TODO super inefficient matrix mul
+
+
 
 // Shader sources
 static VS_SRC: &'static str = "
@@ -62,116 +68,23 @@ void main() {
 pub struct Vertex(pub [f32;2]);
 
 
-fn compile_shader(src: &str, ty: GLenum) -> GLuint {
-    let shader;
-    unsafe {
-        shader = gl::CreateShader(ty);
-        // Attempt to compile the shader
-        let c_str = CString::new(src.as_bytes()).unwrap();
-        gl::ShaderSource(shader, 1, &c_str.as_ptr(), ptr::null());
-        gl::CompileShader(shader);
-
-        // Get the compile status
-        let mut status = gl::FALSE as GLint;
-        gl::GetShaderiv(shader, gl::COMPILE_STATUS, &mut status);
-
-        // Fail on error
-        if status != (gl::TRUE as GLint) {
-            let mut len = 0;
-            gl::GetShaderiv(shader, gl::INFO_LOG_LENGTH, &mut len);
-            let mut buf = Vec::with_capacity(len as usize);
-            buf.set_len((len as usize) - 1); // subtract 1 to skip the trailing null character
-            gl::GetShaderInfoLog(
-                shader,
-                len,
-                ptr::null_mut(),
-                buf.as_mut_ptr() as *mut GLchar,
-            );
-            panic!(
-                "{}",
-                str::from_utf8(&buf)
-                    .ok()
-                    .expect("ShaderInfoLog not valid utf8")
-            );
-        }
-    }
-    shader
-}
-
-fn link_program(vs: GLuint, fs: GLuint) -> GLuint {
-    unsafe {
-        let program = gl::CreateProgram();
-        gl::AttachShader(program, vs);
-        gl::AttachShader(program, fs);
-        gl::LinkProgram(program);
-        // Get the link status
-        let mut status = gl::FALSE as GLint;
-        gl::GetProgramiv(program, gl::LINK_STATUS, &mut status);
-
-        // Fail on error
-        if status != (gl::TRUE as GLint) {
-            let mut len: GLint = 0;
-            gl::GetProgramiv(program, gl::INFO_LOG_LENGTH, &mut len);
-            let mut buf = Vec::with_capacity(len as usize);
-            buf.set_len((len as usize) - 1); // subtract 1 to skip the trailing null character
-            gl::GetProgramInfoLog(
-                program,
-                len,
-                ptr::null_mut(),
-                buf.as_mut_ptr() as *mut GLchar,
-            );
-            panic!(
-                "{}",
-                str::from_utf8(&buf)
-                    .ok()
-                    .expect("ProgramInfoLog not valid utf8")
-            );
-        }
-        program
-    }
-}
-
-
 
 use glutin::NotCurrent;
 use glutin::PossiblyCurrent;
 
+/*
 pub struct GlSysBuilder{
     windowed_context:glutin::WindowedContext<PossiblyCurrent>
 }
 impl GlSysBuilder{
 
-    pub fn new(events_loop:&glutin::EventsLoop)->GlSysBuilder{
+    pub fn new()->GlSysBuilder{
         
-        let size = glutin::dpi::PhysicalSize::new(1024., 768.);
-
-        let gl_window = glutin::WindowBuilder::new().with_multitouch()
-            .with_dimensions(glutin::dpi::LogicalSize::from_physical(size, 1.0));
- 
-
-        //we are targeting only opengl 3.0 es. and glsl 300 es.
-        
-
-        
-        //let gl_window = glutin::WindowBuilder::new().with_title("Hay");
-
-        let windowed_context = glutin::ContextBuilder::new()
-        .with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGlEs, (3, 0)))
-        .with_vsync(true).
-        build_windowed(gl_window,&events_loop).unwrap();
-  
-        let windowed_context = unsafe { windowed_context.make_current().unwrap() };
-
-
-        let glutin::dpi::LogicalSize{width: _,height: _}=windowed_context.window().get_inner_size().unwrap();
         GlSysBuilder{windowed_context}
     }
 
-    pub fn get_dim(&self)->(usize,usize){
-        let glutin::dpi::LogicalSize{width,height}=self.windowed_context.window().get_inner_size().unwrap();
-        (width as usize,height as usize)
-    }
 }
+*/
 
 
 struct ContextSetup{
@@ -228,7 +141,7 @@ impl ContextSetup{
             gl::BufferData(
                 gl::ARRAY_BUFFER,
                 (verts.len() *mem::size_of::<Vertex>()) as GLsizeiptr,
-                mem::transmute(&verts[0]),
+                mem::transmute(verts.as_ptr()),
                 gl::DYNAMIC_DRAW,
             );
 
@@ -300,14 +213,19 @@ impl ContextSetup{
 
 
 pub struct GlSys{
-    length:usize,
+    buffer:Vec<Vertex>,
     windowed_context:glutin::WindowedContext<PossiblyCurrent>,
     cs:ContextSetup,
-    back_col:[f32;3]
+    back_col:[f32;3],
+    _p:PhantomData<*mut usize>
 }
 
 
 impl GlSys{
+    pub fn get_num_verticies(&self)->usize{
+        self.buffer.len()
+    }
+
 
     ///array should be full of xy pairs
     ///the orientation:
@@ -315,10 +233,43 @@ impl GlSys{
     ///width,0 is top right
     ///0,height is bottom left
     ///width,height is bottom right
-    pub fn new(builder:GlSysBuilder,verts:&[Vertex],border:Rect<f32>,point_size:f32)->GlSys{
+    pub fn new(events_loop:&glutin::EventsLoop)->GlSys{
+        let num_verticies=0;
+        let mut border=axgeom::Rect::new(0.0,0.0,0.0,0.0);
+        let point_size=0.0;
+        //let radius=game_response.new_game_world.unwrap().1;
+
+
+        let mut buffer=Vec::new();
+        buffer.resize(num_verticies,Vertex([0.0;2]));
+
+        let size = glutin::dpi::PhysicalSize::new(1024., 768.);
+
+        let gl_window = glutin::WindowBuilder::new().with_multitouch()
+            .with_dimensions(glutin::dpi::LogicalSize::from_physical(size, 1.0));
+ 
+
+        //we are targeting only opengl 3.0 es. and glsl 300 es.
+        
+
+        
+        //let gl_window = glutin::WindowBuilder::new().with_title("Hay");
+
+        let windowed_context = glutin::ContextBuilder::new()
+        .with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGlEs, (3, 0)))
+        .with_vsync(true).
+        build_windowed(gl_window,&events_loop).unwrap();
+  
+        let windowed_context = unsafe { windowed_context.make_current().unwrap() };
+
+
+        let glutin::dpi::LogicalSize{width: _,height: _}=windowed_context.window().get_inner_size().unwrap();
+
+
+
         //println!("verts len is ={}",verts.len());
         use glutin::Context;
-        let GlSysBuilder{windowed_context}=builder;
+        //let GlSysBuilder{windowed_context}=builder;
         
         let windowed_context = unsafe { windowed_context.make_current() }.unwrap();
 
@@ -326,11 +277,11 @@ impl GlSys{
          // It is essential to make the context current before calling `gl::load_with`.
         
         
-        let cs=ContextSetup::new(windowed_context.context(),width as u32,height as u32,verts,border,point_size);
+        let cs=ContextSetup::new(windowed_context.context(),width as u32,height as u32,&buffer,border,point_size);
 
         //Self::update_uniform(program,&gl_window,width,height);
         //println!("updated uniform");
-        GlSys{windowed_context,length:verts.len(),cs,back_col:[0.,0.,0.]}
+        GlSys{windowed_context,buffer,cs,back_col:[0.,0.,0.],_p:PhantomData}
 
     }
     
@@ -357,6 +308,25 @@ impl GlSys{
         let glutin::dpi::LogicalSize{width,height}=self.windowed_context.window().get_inner_size().unwrap();
         (width as usize,height as usize)
     }
+
+    
+    pub fn update<T>(&mut self,arr:&[T],mut func:impl FnMut(&T)->Vertex){
+        assert!(arr.len()==self.buffer.len());
+        
+        for (a,b) in self.buffer.iter_mut().zip(arr.iter()){
+            *a=func(b);
+        }
+        unsafe{
+            gl::BufferSubData(
+                gl::ARRAY_BUFFER,
+                0,
+                (self.buffer.len()*mem::size_of::<Vertex>()) as GLsizeiptr,
+                mem::transmute(self.buffer.as_ptr()),
+            );
+        
+        }
+    }
+    /*
     pub fn update(&self,verts:&[Vertex]){
         assert!(verts.len()==self.length);
         unsafe{
@@ -365,25 +335,24 @@ impl GlSys{
                     gl::ARRAY_BUFFER,
                     0,
                     (verts.len()*mem::size_of::<Vertex>()) as GLsizeiptr,
-                    mem::transmute(&verts[0]),
+                    mem::transmute(verts.as_ptr()),
                 );
             }
         }
     }
-
-    pub fn re_generate_buffer(&mut self,verts:&[Vertex]){
-        self.length=verts.len();
+    */
+    pub fn re_generate_buffer(&mut self,num_verticies:usize){
+        self.buffer.resize(num_verticies,Vertex([0.0;2]));
         let _vbo=&mut self.cs.vbo;
         unsafe{
 
-            if verts.len()>0{
-                gl::BufferData(
-                    gl::ARRAY_BUFFER,
-                    (verts.len() *mem::size_of::<Vertex>()) as GLsizeiptr,
-                    mem::transmute(&verts[0]),
-                    gl::DYNAMIC_DRAW,
-                );
-            }
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (self.buffer.len() *mem::size_of::<Vertex>()) as GLsizeiptr,
+                mem::transmute(self.buffer.as_ptr()),
+                gl::DYNAMIC_DRAW,
+            );
+        
         }
     }
     
@@ -395,53 +364,10 @@ impl GlSys{
             gl::ClearColor(b[0], b[1], b[2], 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
 
-
-            // Draw a triangle from the 3 vertices
-            //gl::DrawArrays(gl::TRIANGLES, 0, self.length as i32 *2);
-            //gl::PointSize(5.0);
-            gl::DrawArrays(gl::POINTS,0, self.length as i32);
+            gl::DrawArrays(gl::POINTS,0, self.buffer.len() as i32);
         }
         self.windowed_context.swap_buffers().unwrap();
     }
 }
-
-
-/*
-fn main() {
-
-    // Vertex data
-    let mut verts: [GLfloat; 6] = [0.0, 0.0, 1024.0, 0.0, 1024.0,768.0];
-    let verts:&mut [Vertex;3]=unsafe{std::mem::transmute(&mut verts)};
-
-    
-
-    let mut events_loop = glutin::EventsLoop::new();
-
-    
-    let j=GlSysBuilder::new(&events_loop);
-    
-    let k=GlSys::new(j,verts);    
-    
-
-    let mut val=0.5;
-    loop{
-        events_loop.poll_events(|event| {
-            use glutin::{ControlFlow, Event, WindowEvent};
-
-            if let Event::WindowEvent { event, .. } = event {
-                if let WindowEvent::Closed = event {
-                    //return ControlFlow::Break;
-                }
-            }
-
-        });
-        val=0.5-val;
-        verts[0].0[0]=val;
-        k.update(verts);
-        k.draw();
-    }
-}*/
-
-
 
 
