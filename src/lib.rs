@@ -7,10 +7,10 @@ mod gl {
 mod shader;
 use shader::*;
 
-
-extern crate glutin;
+//extern crate glutin;
 extern crate axgeom;
 
+pub use glutin;
 use axgeom::*;
 use crate::gl::types::*;
 use std::mem;
@@ -30,31 +30,36 @@ static VS_SRC: &'static str = "
 in vec2 position;
 uniform mat2 mmatrix;
 uniform float point_size;
+in float alpha;
+out float alpha2;
 void main() {
     gl_PointSize = point_size;
-    gl_Position = vec4(position*mmatrix, 0.0, 1.0);
+    gl_Position = vec4(position.xy*mmatrix, 0.0, 1.0);
+    alpha2=alpha;
 }";
 
 static FS_SRC: &'static str = "
 #version 300 es
 precision mediump float;
+in float alpha2;
 uniform vec3 bcol;
 out vec4 out_color;
 void main() {
 
-    vec2 coord = gl_PointCoord - vec2(0.5);  //from [0,1] to [-0.5,0.5]
+    //vec2 coord = gl_PointCoord - vec2(0.5);  //from [0,1] to [-0.5,0.5]
+    vec2 coord = gl_PointCoord - vec2(0.5);
     float dis=dot(coord,coord);
     if(dis > 0.25)                  //outside of circle radius?
         discard;
 
-    out_color = vec4(bcol, 1.0);
+    out_color = vec4(bcol,alpha2);
 }";
 
 
 
 #[repr(transparent)]
 #[derive(Copy,Clone,Debug,Default)]
-pub struct Vertex(pub [f32;2]);
+pub struct Vertex(pub [f32;3]);
 
 
 
@@ -106,7 +111,7 @@ impl ContextSetup{
         assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
         
         
-        
+        /*
         unsafe{
             // Use shader program
             gl::UseProgram(program);
@@ -121,10 +126,11 @@ impl ContextSetup{
                 2,
                 gl::FLOAT,
                 gl::FALSE as GLboolean,
-                0,
+                1,
                 ptr::null(),
             );
         }
+        */
 
         Self::set_border_radius(program,game_world,width as usize,height as usize,point_size);
         println!("yeeee");
@@ -150,10 +156,13 @@ impl ContextSetup{
                 ];    
             
 
-
+            gl::UseProgram(program);
+            
 
             let point_size=point_size*(width/w);
             let myloc:GLint = gl::GetUniformLocation(program, CString::new("point_size").unwrap().as_ptr());
+            assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
+        
             gl::Uniform1f(myloc,point_size);
             assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
         
@@ -177,6 +186,7 @@ pub struct GlSys{
 }
 
 
+#[derive(Clone,Debug)]
 pub struct Buffer{
     vbo:u32,
     buffer:Vec<Vertex>
@@ -226,7 +236,7 @@ impl Buffer{
 impl GlSys{
     
     pub fn re_generate_buffer(&mut self,buffer:&mut Buffer,num_verticies:usize){
-        buffer.buffer.resize(num_verticies,Vertex([1000.0;2]));
+        buffer.buffer.resize(num_verticies,Vertex([0.0;3]));
         let _vbo=&mut buffer.vbo;
         unsafe{
 
@@ -245,7 +255,7 @@ impl GlSys{
         let mut vbo = 0;
         
         let mut buffer=Vec::new();
-        buffer.resize(num_verticies,Vertex([-1000.0;2]));
+        buffer.resize(num_verticies,Vertex([0.0;3]));
         
         unsafe {
 
@@ -270,15 +280,22 @@ impl GlSys{
     ///width,0 is top right
     ///0,height is bottom left
     ///width,height is bottom right
-    pub fn new(events_loop:&glutin::EventsLoop)->GlSys{
+    pub fn new(events_loop:&glutin::event_loop::EventLoop<()>)->GlSys{
 
         let mut border=axgeom::Rect::new(0.0,0.0,0.0,0.0);
         let point_size=0.0;
 
-        let size = glutin::dpi::PhysicalSize::new(1024., 768.);
+        //let size = glutin::dpi::PhysicalSize::new(1024., 768.);
 
-        let gl_window = glutin::WindowBuilder::new().with_multitouch()
-            .with_dimensions(glutin::dpi::LogicalSize::from_physical(size, 1.0));
+        use glutin::window::Fullscreen;
+        let fullscreen = Fullscreen::Borderless(prompt_for_monitor(events_loop));
+
+        //Fullscreen::Exclusive(prompt_for_video_mode(&prompt_for_monitor(events_loop)));
+
+
+        let gl_window = glutin::window::WindowBuilder::new()
+            .with_fullscreen(Some(fullscreen));
+            //.with_dimensions(glutin::dpi::LogicalSize::from_physical(size, 1.0));
  
         //assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
         
@@ -295,7 +312,7 @@ impl GlSys{
 
         //assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
         
-        let glutin::dpi::LogicalSize{width: _,height: _}=windowed_context.window().get_inner_size().unwrap();
+        let glutin::dpi::LogicalSize{width: _,height: _}=windowed_context.window().inner_size();
 
         use glutin::Context;
         
@@ -306,7 +323,8 @@ impl GlSys{
         //assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
         
 
-        let glutin::dpi::LogicalSize{width,height}=windowed_context.window().get_inner_size().unwrap();
+        let glutin::dpi::LogicalSize{width,height}=windowed_context.window().inner_size();
+        println!("width={:?} height={:?}",width,height);
          // It is essential to make the context current before calling `gl::load_with`.
         
         //assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
@@ -328,20 +346,64 @@ impl GlSys{
     }
 
     pub fn get_dim(&self)->(usize,usize){
-        let glutin::dpi::LogicalSize{width,height}=self.windowed_context.window().get_inner_size().unwrap();
+        let glutin::dpi::LogicalSize{width,height}=self.windowed_context.window().inner_size();
         (width as usize,height as usize)
     }
 
 
     pub fn new_draw_session(&mut self,back_color:[f32;3])->DrawSession{
         unsafe{
-            
+            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+            gl::Enable( gl::BLEND );
+
             gl::ClearColor(back_color[0], back_color[1], back_color[2], 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
 
         DrawSession{a:self}
     }
+}
+
+
+use glutin::event::{
+    ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent,
+};
+use glutin::event_loop::{ControlFlow, EventLoop};
+use glutin::monitor::{MonitorHandle, VideoMode};
+use glutin::window::{Fullscreen, WindowBuilder};
+use std::io::{stdin, stdout, Write};
+
+
+// Enumerate monitors and prompt user to choose one
+fn prompt_for_monitor(el: &EventLoop<()>) -> MonitorHandle {
+    let num =0;
+    let monitor = el
+        .available_monitors()
+        .nth(num)
+        .expect("Please enter a valid ID");
+
+    monitor
+}
+
+fn prompt_for_video_mode(monitor: &MonitorHandle) -> VideoMode {
+    for (i, video_mode) in monitor.video_modes().enumerate() {
+        println!("Video mode #{}: {}", i, video_mode);
+    }
+
+    print!("Please write the number of the video mode to use: ");
+    stdout().flush().unwrap();
+
+    let mut num = String::new();
+    stdin().read_line(&mut num).unwrap();
+    let num = num.trim().parse().ok().expect("Please enter a number");
+    let video_mode = monitor
+        .video_modes()
+        .nth(num)
+        .expect("Please enter a valid ID");
+
+    println!("Using {}", video_mode);
+
+    video_mode
 }
 
 
@@ -371,14 +433,28 @@ impl<'a> DrawSession<'a>{
                 2,
                 gl::FLOAT,
                 gl::FALSE as GLboolean,
-                0,
+                3*mem::size_of::<f32>() as i32,
                 ptr::null(),
             );
             /////
-
+            
+            
+            let pos_attr = gl::GetAttribLocation(self.a.cs.program, CString::new("alpha").unwrap().as_ptr());
+            gl::EnableVertexAttribArray(pos_attr as GLuint);
+            gl::VertexAttribPointer(
+                pos_attr as GLuint,
+                1,
+                gl::FLOAT,
+                gl::FALSE as GLboolean,
+                3*mem::size_of::<f32>() as i32,
+                (2*mem::size_of::<f32>()) as *const std::ffi::c_void,
+            );
+            
+            //////
             gl::DrawArrays(gl::POINTS,start as i32, end as i32);
         }
     }
+    /*
     pub fn draw_vbo(&mut self,buffer:&Buffer,color:[f32;3]){
          unsafe{
             // Clear the screen to black
@@ -396,7 +472,7 @@ impl<'a> DrawSession<'a>{
             gl::EnableVertexAttribArray(pos_attr as GLuint);
             gl::VertexAttribPointer(
                 pos_attr as GLuint,
-                2,
+                3,
                 gl::FLOAT,
                 gl::FALSE as GLboolean,
                 0,
@@ -407,7 +483,7 @@ impl<'a> DrawSession<'a>{
             gl::DrawArrays(gl::POINTS,0, buffer.buffer.len() as i32);
         }
     }
-
+    */
     pub fn finish(self){
         self.a.windowed_context.swap_buffers().unwrap();
         assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
