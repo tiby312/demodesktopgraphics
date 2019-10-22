@@ -93,7 +93,6 @@ impl ContextSetup{
     fn new(context:&glutin::Context<PossiblyCurrent>,width:u32,height:u32,game_world:Rect<f32>,point_size:f32)->ContextSetup{
         use glutin::Context;
 
-        println!("yeeee");
         // Load the OpenGL function pointers
         gl::load_with(|symbol| context.get_proc_address(symbol) as *const _);
         assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
@@ -133,8 +132,8 @@ impl ContextSetup{
         */
 
         Self::set_border_radius(program,game_world,width as usize,height as usize,point_size);
-        println!("yeeee");
         
+
         ContextSetup{fs,vs,program}
     }
 
@@ -285,52 +284,38 @@ impl GlSys{
         let mut border=axgeom::Rect::new(0.0,0.0,0.0,0.0);
         let point_size=0.0;
 
-        //let size = glutin::dpi::PhysicalSize::new(1024., 768.);
-
         use glutin::window::Fullscreen;
         let fullscreen = Fullscreen::Borderless(prompt_for_monitor(events_loop));
 
-        //Fullscreen::Exclusive(prompt_for_video_mode(&prompt_for_monitor(events_loop)));
-
-
         let gl_window = glutin::window::WindowBuilder::new()
             .with_fullscreen(Some(fullscreen));
-            //.with_dimensions(glutin::dpi::LogicalSize::from_physical(size, 1.0));
- 
-        //assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
-        
+         
         //we are targeting only opengl 3.0 es. and glsl 300 es.
         
         let windowed_context = glutin::ContextBuilder::new()
         .with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGlEs, (3, 0)))
-        .with_vsync(true).
-        build_windowed(gl_window,&events_loop).unwrap();
+        .with_vsync(true)
+        .build_windowed(gl_window,&events_loop).unwrap();
 
-        //assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
-          
+
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        
         let windowed_context = unsafe { windowed_context.make_current().unwrap() };
 
-        //assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
-        
         let glutin::dpi::LogicalSize{width: _,height: _}=windowed_context.window().inner_size();
 
         use glutin::Context;
-        
-        //assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
                 
         let windowed_context = unsafe { windowed_context.make_current() }.unwrap();
 
-        //assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
-        
-
         let glutin::dpi::LogicalSize{width,height}=windowed_context.window().inner_size();
-        println!("width={:?} height={:?}",width,height);
-         // It is essential to make the context current before calling `gl::load_with`.
         
-        //assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
-        
+        // It is essential to make the context current before calling `gl::load_with`.
+
         let cs=ContextSetup::new(windowed_context.context(),width as u32,height as u32,border,point_size);
 
+
+        
         assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
         GlSys{windowed_context,cs,_p:PhantomData}
 
