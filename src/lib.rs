@@ -38,6 +38,9 @@ void main() {
     alpha2=alpha;
 }";
 
+
+
+//https://blog.lapingames.com/draw-circle-glsl-shader/
 static FS_SRC: &'static str = "
 #version 300 es
 precision mediump float;
@@ -52,7 +55,9 @@ void main() {
     if(dis > 0.25)                  //outside of circle radius?
         discard;
 
-    out_color = vec4(bcol,alpha2);
+    float sm = smoothstep(0.0,0.25,0.25-dis);
+
+    out_color = vec4(bcol,alpha2*sm);
 }";
 
 
@@ -158,11 +163,15 @@ impl ContextSetup{
             gl::UseProgram(program);
             
 
-            let point_size=point_size*(width/w);
+
+            let point_size2=point_size*(width/w);
+            
+            dbg!(width,w,point_size,point_size2);
+
             let myloc:GLint = gl::GetUniformLocation(program, CString::new("point_size").unwrap().as_ptr());
             assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
         
-            gl::Uniform1f(myloc,point_size);
+            gl::Uniform1f(myloc,point_size2);
             assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
         
             let myloc:GLint = gl::GetUniformLocation(program, CString::new("mmatrix").unwrap().as_ptr());
@@ -309,7 +318,7 @@ impl GlSys{
         let windowed_context = unsafe { windowed_context.make_current() }.unwrap();
 
         let glutin::dpi::LogicalSize{width,height}=windowed_context.window().inner_size();
-        
+
         // It is essential to make the context current before calling `gl::load_with`.
 
         let cs=ContextSetup::new(windowed_context.context(),width as u32,height as u32,border,point_size);
