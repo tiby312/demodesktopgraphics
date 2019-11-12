@@ -46,19 +46,20 @@ static FS_SRC: &'static str = "
 precision mediump float;
 in float alpha2;
 uniform vec3 bcol;
+uniform bool square;
 out vec4 out_color;
 void main() {
 
-    //vec2 coord = gl_PointCoord - vec2(0.5);  //from [0,1] to [-0.5,0.5]
     vec2 coord = gl_PointCoord - vec2(0.5);
-    float dis=dot(coord,coord);
-    if(dis > 0.25)                  //outside of circle radius?
-        discard;
+    if (!square){
+        float dis=dot(coord,coord);
+        if(dis > 0.25)                  //outside of circle radius?
+            discard;
+    }
 
-    float sm = smoothstep(0.0,0.25,0.25-dis);
-
-    out_color = vec4(bcol,alpha2*sm);
+    out_color = vec4(bcol,alpha2);
 }";
+
 
 
 
@@ -114,35 +115,13 @@ impl ContextSetup{
 
         assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
         
-        
-        /*
-        unsafe{
-            // Use shader program
-            gl::UseProgram(program);
-            
-            gl::BindAttribLocation(program, 0, CString::new("out_color").unwrap().as_ptr());
-            
-            // Specify the layout of the vertex data
-            let pos_attr = gl::GetAttribLocation(program, CString::new("position").unwrap().as_ptr());
-            gl::EnableVertexAttribArray(pos_attr as GLuint);
-            gl::VertexAttribPointer(
-                pos_attr as GLuint,
-                2,
-                gl::FLOAT,
-                gl::FALSE as GLboolean,
-                1,
-                ptr::null(),
-            );
-        }
-        */
-
-        Self::set_border_radius(program,game_world,width as usize,height as usize,point_size);
+        Self::set_border_radius(program,game_world,width as usize,height as usize,point_size,true);
         
 
         ContextSetup{fs,vs,program}
     }
 
-    fn set_border_radius(program:GLuint,game_world:Rect<f32>,width:usize,height:usize,point_size:f32){
+    fn set_border_radius(program:GLuint,game_world:Rect<f32>,width:usize,height:usize,point_size:f32,square:bool){
         let width=width as f32;
         let _height=height as f32;
 
@@ -167,6 +146,14 @@ impl ContextSetup{
             let point_size2=point_size*(width/w);
             
             dbg!(width,w,point_size,point_size2);
+
+            let myloc:GLint = gl::GetUniformLocation(program, CString::new("square").unwrap().as_ptr());
+            assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
+        
+            let square=if square{1}else{0};
+            gl::Uniform1i(myloc,square);
+            assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
+        
 
             let myloc:GLint = gl::GetUniformLocation(program, CString::new("point_size").unwrap().as_ptr());
             assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
@@ -330,14 +317,11 @@ impl GlSys{
 
     }
     
-
+    /*
     pub fn set_camera_and_bot_radius(&mut self,border:Rect<f32>,radius:f32){
-        let (width,height)=self.get_dim();
-
-        ContextSetup::set_border_radius(self.cs.program,border,width,height,radius);
-        assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
         
     }
+    */
 
     pub fn get_dim(&self)->(usize,usize){
         let glutin::dpi::LogicalSize{width,height}=self.windowed_context.window().inner_size();
@@ -345,7 +329,12 @@ impl GlSys{
     }
 
 
-    pub fn new_draw_session(&mut self,back_color:[f32;3])->DrawSession{
+    pub fn new_draw_session(&mut self,back_color:[f32;3],border:Rect<f32>,radius:f32,square:bool)->DrawSession{
+        let (width,height)=self.get_dim();
+
+        ContextSetup::set_border_radius(self.cs.program,border,width,height,radius,square);
+        assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
+        
         unsafe{
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
             gl::Enable( gl::BLEND );
