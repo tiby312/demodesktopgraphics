@@ -198,47 +198,43 @@ impl Drop for Buffer{
 
 
 impl Buffer{
+    pub fn get_verts_mut(&mut self)->&mut [Vertex]{
+        &mut self.buffer
+    }
 
-    pub fn update<T>(&mut self,arr:&[T],mut func:impl FnMut(&T)->Vertex){
-        assert!(arr.len()==self.buffer.len());
-        
-        for (a,b) in self.buffer.iter_mut().zip(arr.iter()){
-            *a=func(b);
-        }
-
-        //dbg!(&self.buffer[..20]);
+    
+    pub fn update(&mut self){
+        let vbo=&mut self.vbo;
         
         unsafe{
-            //gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
-            //println!("YOOOO");
+            gl::BindBuffer(gl::ARRAY_BUFFER, *vbo);
+            
             gl::BufferSubData(
                 gl::ARRAY_BUFFER,
                 0,
                 (self.buffer.len()*mem::size_of::<Vertex>()) as GLsizeiptr,
                 mem::transmute(self.buffer.as_ptr()),
             );
-        
         }
         assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);   
     }
+    
 
     pub fn get_num_verticies(&self)->usize{
         self.buffer.len()
     }
-}
 
-
-impl GlSys{
     
-    pub fn re_generate_buffer(&mut self,buffer:&mut Buffer,num_verticies:usize){
-        buffer.buffer.resize(num_verticies,Vertex([0.0;3]));
-        let _vbo=&mut buffer.vbo;
+    pub fn re_generate_buffer(&mut self,num_verticies:usize){
+        
+        self.buffer.resize(num_verticies,Vertex([0.0;3]));
+        let vbo=&mut self.vbo;
         unsafe{
-
+            gl::BindBuffer(gl::ARRAY_BUFFER, *vbo);
             gl::BufferData(
                 gl::ARRAY_BUFFER,
-                (buffer.buffer.len() *mem::size_of::<Vertex>()) as GLsizeiptr,
-                mem::transmute(buffer.buffer.as_ptr()),
+                (self.buffer.len() *mem::size_of::<Vertex>()) as GLsizeiptr,
+                mem::transmute(self.buffer.as_ptr()),
                 gl::DYNAMIC_DRAW,
             );
         }
@@ -246,7 +242,7 @@ impl GlSys{
         
     }
 
-    pub fn create_vbo(&mut self,num_verticies:usize)->Buffer{
+    pub fn create_vbo(num_verticies:usize)->Buffer{
         let mut vbo = 0;
         
         let mut buffer=Vec::new();
@@ -269,6 +265,10 @@ impl GlSys{
 
         Buffer{vbo,buffer}
     }
+}
+
+
+impl GlSys{
     ///array should be full of xy pairs
     ///the orientation:
     ///0,0 is top left
@@ -329,11 +329,8 @@ impl GlSys{
     }
 
 
-    pub fn new_draw_session(&mut self,back_color:[f32;3],border:Rect<f32>,radius:f32,square:bool)->DrawSession{
-        let (width,height)=self.get_dim();
-
-        ContextSetup::set_border_radius(self.cs.program,border,width,height,radius,square);
-        assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
+    pub fn new_draw_session(&mut self,back_color:[f32;3],border:Rect<f32>)->DrawSession{
+        
         
         unsafe{
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
@@ -342,8 +339,7 @@ impl GlSys{
             gl::ClearColor(back_color[0], back_color[1], back_color[2], 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
-
-        DrawSession{a:self}
+        DrawSession{a:self,border}
     }
 }
 
@@ -391,13 +387,19 @@ fn prompt_for_video_mode(monitor: &MonitorHandle) -> VideoMode {
 
 
 pub struct DrawSession<'a>{
-    a:&'a mut GlSys
+    a:&'a mut GlSys,
+    border:Rect<f32>,
 }
 
 impl<'a> DrawSession<'a>{
 
-    pub fn draw_vbo_section(&mut self,buffer:&Buffer,start:usize,end:usize,color:[f32;3]){
+    pub fn draw_vbo_section(&mut self,buffer:&Buffer,start:usize,end:usize,color:[f32;3],radius:f32,square:bool){
+        let (width,height) = self.a.get_dim();
+
         unsafe{
+            ContextSetup::set_border_radius(self.a.cs.program,self.border,width,height,radius,square);
+            assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
+
             // Clear the screen to black
             
             gl::BindBuffer(gl::ARRAY_BUFFER, buffer.vbo);
