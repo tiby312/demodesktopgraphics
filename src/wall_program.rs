@@ -21,8 +21,8 @@ in float alpha;
 out float alpha2;
 void main() {
     gl_PointSize = point_size;
-    vec3 pp=vec3(position,1.0);
-    gl_Position = vec4(mmatrix*pp.xyz, 1.0);
+    vec3 pp=vec3(position,0.0);
+    gl_Position = vec4(pp.xyz*mmatrix, 1.0);
     alpha2=alpha;
 }";
 
@@ -39,11 +39,7 @@ void main() {
 
     vec2 coord = gl_PointCoord - vec2(0.5);
     
-    float dis=dot(coord,coord);
-    if(dis > 0.25)                  //outside of circle radius?
-        discard;
-
-
+    
     out_color = vec4(bcol,alpha2);
 }";
 
@@ -69,18 +65,14 @@ fn set_border_radius(program:GLuint,game_world:Rect<f32>,width:usize,height:usiz
     let scalex=2.0/w;
     let scaley=2.0/h;
 
-
     let tx=x1-(w/2.0);
     let ty=y1-(h/2.0);
-    let tx=-1.;
-    let ty=1.;
     unsafe{
         let matrix= [
-                [scalex, 0.0, 0.0],
-                [0.0, -scaley,0.0],
-                [tx,ty,1.0]
+                [scalex, 0.0, tx],
+                [0.0, -scaley,ty],
+                [0.0,0.0,1.0]
             ];    
-
         
 
         gl::UseProgram(program);
