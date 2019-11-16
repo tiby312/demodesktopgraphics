@@ -5,19 +5,19 @@ mod gl {
 
 
 mod shader;
-use shader::*;
+
 
 //extern crate glutin;
 extern crate axgeom;
 
 pub use glutin;
 use axgeom::*;
-use crate::gl::types::*;
-use std::mem;
-use std::ptr;
-use std::str;
-use std::ffi::CString;
-use core::marker::PhantomData;
+
+
+
+
+
+
 
 //https://github.com/mattdesl/three-line-2d
 //TODO try this.
@@ -28,7 +28,7 @@ pub mod circle_program;
 pub mod vbo;
 
 
-use glutin::NotCurrent;
+
 use glutin::PossiblyCurrent;
 
 
@@ -49,8 +49,8 @@ impl GlSys{
     ///width,height is bottom right
     pub fn new(events_loop:&glutin::event_loop::EventLoop<()>)->GlSys{
 
-        let mut border=axgeom::Rect::new(0.0,0.0,0.0,0.0);
-        let point_size=0.0;
+        let _border=axgeom::Rect::new(0.0,0.0,0.0,0.0);
+        let _point_size=0.0;
 
         use glutin::window::Fullscreen;
         let fullscreen = Fullscreen::Borderless(prompt_for_monitor(events_loop));
@@ -75,13 +75,13 @@ impl GlSys{
                 
         let windowed_context = unsafe { windowed_context.make_current() }.unwrap();
 
-        let glutin::dpi::LogicalSize{width,height}=windowed_context.window().inner_size();
+        let glutin::dpi::LogicalSize{width: _,height: _}=windowed_context.window().inner_size();
 
         // It is essential to make the context current before calling `gl::load_with`.
 
         //let cs=ContextSetup::new(windowed_context.context(),width as u32,height as u32,border,point_size);
 
-        use glutin::Context;
+        
 
         // Load the OpenGL function pointers
         gl::load_with(|symbol| windowed_context.get_proc_address(symbol) as *const _);
@@ -107,13 +107,11 @@ impl GlSys{
 }
 
 
-use glutin::event::{
-    ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent,
-};
-use glutin::event_loop::{ControlFlow, EventLoop};
-use glutin::monitor::{MonitorHandle, VideoMode};
-use glutin::window::{Fullscreen, WindowBuilder};
-use std::io::{stdin, stdout, Write};
+
+use glutin::event_loop::{EventLoop};
+use glutin::monitor::{MonitorHandle};
+
+//use std::io::{stdin, stdout, Write};
 
 
 // Enumerate monitors and prompt user to choose one
@@ -127,6 +125,7 @@ fn prompt_for_monitor(el: &EventLoop<()>) -> MonitorHandle {
     monitor
 }
 
+/*
 fn prompt_for_video_mode(monitor: &MonitorHandle) -> VideoMode {
     for (i, video_mode) in monitor.video_modes().enumerate() {
         println!("Video mode #{}: {}", i, video_mode);
@@ -147,4 +146,4 @@ fn prompt_for_video_mode(monitor: &MonitorHandle) -> VideoMode {
 
     video_mode
 }
-
+*/

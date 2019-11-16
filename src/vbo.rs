@@ -1,12 +1,12 @@
-use axgeom;
-use axgeom::*;
-use crate::shader::*;
+
+
+
 use crate::gl;
 use crate::gl::types::*;
 
-use std::ptr;
-use std::str;
-use std::ffi::CString;
+
+
+
 use core::mem;
 
 #[derive(Clone,Debug)]
