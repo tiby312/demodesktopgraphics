@@ -145,7 +145,7 @@ impl ContextSetup{
 
             let point_size2=point_size*(width/w);
             
-            dbg!(width,w,point_size,point_size2);
+            //dbg!(width,w,point_size,point_size2);
 
             let myloc:GLint = gl::GetUniformLocation(program, CString::new("square").unwrap().as_ptr());
             assert_eq!(unsafe{gl::GetError()},gl::NO_ERROR);
@@ -317,12 +317,7 @@ impl GlSys{
 
     }
     
-    /*
-    pub fn set_camera_and_bot_radius(&mut self,border:Rect<f32>,radius:f32){
-        
-    }
-    */
-
+    
     pub fn get_dim(&self)->(usize,usize){
         let glutin::dpi::LogicalSize{width,height}=self.windowed_context.window().inner_size();
         (width as usize,height as usize)
