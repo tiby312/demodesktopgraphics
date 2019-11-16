@@ -6,7 +6,7 @@ build = "build.rs"
 edition = "2018"
 
 [dependencies]
-glutin = "0.22.0-alpha3"
+glutin = {git="https://github.com/rust-windowing/glutin.git"}
 axgeom = "1.2"
 
 [build-dependencies]
