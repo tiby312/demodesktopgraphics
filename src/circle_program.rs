@@ -35,14 +35,16 @@ precision mediump float;
 in float alpha2;
 uniform vec3 bcol;
 out vec4 out_color;
+uniform bool square;
 void main() {
 
     vec2 coord = gl_PointCoord - vec2(0.5);
     
-    float dis=dot(coord,coord);
-    if(dis > 0.25)                  //outside of circle radius?
-        discard;
-
+    if (square){
+        float dis=dot(coord,coord);
+        if(dis > 0.25)                  //outside of circle radius?
+            discard;
+    }
 
     out_color = vec4(bcol,alpha2);
 }";
@@ -58,7 +60,7 @@ pub struct Vertex(pub [f32;3]);
 
 
 
-fn set_border_radius(program:GLuint,game_world:Rect<f32>,width:usize,height:usize,point_size:f32){
+fn set_border_radius(program:GLuint,game_world:Rect<f32>,width:usize,height:usize,point_size:f32,square:bool){
     let width=width as f32;
     let _height=height as f32;
 
@@ -70,10 +72,18 @@ fn set_border_radius(program:GLuint,game_world:Rect<f32>,width:usize,height:usiz
     let scaley=2.0/h;
 
 
-    let tx=x1-(w/2.0);
-    let ty=y1-(h/2.0);
-    let tx=-1.;
-    let ty=1.;
+    //let tx=x1-(w/2.0);
+    //let ty=y1-(h/2.0);
+    //dbg!(w,h);
+    //dbg!(x1,y1);
+    let tx=-(1.+x1/(w/2.0));
+    let ty=(1.+y1/(h/2.0));
+    //dbg!(tx,ty);
+    //let tx=-1.;
+    //let ty=1.;
+    //let tx=0.0;
+    //let ty=0.0;
+    
     unsafe{
         let matrix= [
                 [scalex, 0.0, 0.0],
@@ -91,14 +101,14 @@ fn set_border_radius(program:GLuint,game_world:Rect<f32>,width:usize,height:usiz
         
         //dbg!(width,w,point_size,point_size2);
 
-        /*
+        
         let myloc:GLint = gl::GetUniformLocation(program, CString::new("square").unwrap().as_ptr());
         assert_eq!(gl::GetError(),gl::NO_ERROR);
     
         let square=if square{1}else{0};
         gl::Uniform1i(myloc,square);
         assert_eq!(gl::GetError(),gl::NO_ERROR);
-        */
+        
 
         let myloc:GLint = gl::GetUniformLocation(program, CString::new("point_size").unwrap().as_ptr());
         assert_eq!(gl::GetError(),gl::NO_ERROR);
@@ -181,11 +191,11 @@ pub struct DrawSession<'a>{
 
 impl<'a> DrawSession<'a>{
 
-    pub fn draw_vbo_section(&mut self,dim:Vec2<usize>,buffer:&Buffer<Vertex>,start:usize,end:usize,color:[f32;3],radius:f32){
+    pub fn draw_vbo_section(&mut self,dim:Vec2<usize>,buffer:&Buffer<Vertex>,start:usize,end:usize,color:[f32;3],radius:f32,square:bool){
         let (width,height) = (dim.x,dim.y);
 
         unsafe{
-            set_border_radius(self.a.program,self.border,width,height,radius);
+            set_border_radius(self.a.program,self.border,width,height,radius,square);
             
             assert_eq!(gl::GetError(),gl::NO_ERROR);
 
